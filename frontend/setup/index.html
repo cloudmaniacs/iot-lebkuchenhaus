@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="Maximilian Breig, Claranet GmbH">
+    <title>IoT Center</title>
+    <link rel="icon" href="../favicon.ico">
+    <link rel="shortcut icon" href="../favicon.ico">
+
+    <!-- Bootstrap core CSS -->
+    <link href="../css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="../css/form-validation.css" rel="stylesheet">
+
+    <script>
+
+          var hostname = localStorage.getItem('hostname');
+
+          function connect() {
+
+            var $form = $('#login');
+
+            if(!$form[0].checkValidity()) {
+
+              $('<input type="submit">').hide().appendTo($form).click().remove();
+
+            } else {
+
+              var hostname = document.getElementById("hostname").value;
+
+              var request = new XMLHttpRequest();
+
+              request.open("GET", "https://" + hostname + "/");
+
+              request.addEventListener("load", function(event) {
+
+                if (request.status >= 200 && request.status < 300) {
+
+                  response = request.responseText;
+
+                  if (response == 'IoT Center') {
+
+                    document.getElementById("status").innerHTML = '<span class="text-success">Connection successfull! <i class="fas fa-check-circle"></i></span>';
+
+                    localStorage.setItem('hostname', hostname);
+
+                    setTimeout(function(){ window.location.href = "../"; }, 3000);
+
+                  } else {
+
+                    document.getElementById("status").innerHTML = '<span class="text-danger">Not IoT Center! <i class="fas fa-times-circle"></i></span>';
+                    console.warn(request.statusText, request.responseText);
+
+                  }
+
+                } else {
+
+                  document.getElementById("status").innerHTML = '<span class="text-danger">Connection failed! <i class="fas fa-times-circle"></i></span>';
+                  console.warn(request.statusText, request.responseText);
+
+                }
+
+              });
+
+              request.send();
+
+            }
+
+          }
+
+        </script>
+
+        <style type="text/css">
+
+          .list-group-item {
+            padding: .75rem .75rem;
+          }
+
+          *:hover, *:focus, *:active, .navbar-toggler:focus {
+            outline: none;
+            box-shadow: none !important;
+            -webkit-appearance: none;
+          }
+
+          a {
+            color: #212529 !important;
+          }
+
+        </style>
+
+  </head>
+  <body class="bg-light">
+
+<div class="container">
+
+  <div class="py-5 text-center">
+    <i class="fas fa-5x fa-laptop-house mb-4"></i>&nbsp;&nbsp;<i class="fas fa-3x fa-thermometer-half mb-4"></i>
+    <h2>IoT Center for AWS</h2>
+    <p class="lead"><b>a simple webinterface for all your things</b></p>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6 order-md-2 mb-4">
+      <h4 class="d-flex justify-content-between align-items-center mb-3">API Gateway Setup
+        <span class="lead" id="status">Ready <i class="fas fa-circle"></i></span>
+      </h4>
+      <form id="login" class="needs-validation" novalidate>
+      <hr class="mb-4">
+
+      <div class="row">
+        <div class="col-md-12 mb-3">
+          <label>Invoke URL of the ($default) stage<br><span class="text-muted">(Hostname without https:// and no trailing slash!)</span></label>
+          <div class="input-group">
+          <input type="text" class="form-control" id="hostname" placeholder="xyz1xyzxyz.execute-api.{region}.amazonaws.com" value="" pattern="[a-z0-9.-]{1,}[.]{1,}[a-z]{1,}" required>
+          <div class="invalid-feedback">Please enter a valid hostname.</div>
+        </div>
+        </div>
+      </div>
+
+      <hr class="mb-4">
+
+      <button type="button" class="btn btn-block btn-dark btn-lg" onclick="connect()">Test connection</button>
+
+      </form>
+
+      </div>
+      <div class="col-md-6 order-md-1">
+
+        <div class="py-5 text-center">
+          <h2>Please provide your<br>API Gateway details.</h2>
+          <p class="lead"><b>You can look them up here:</b><br><small><span id="link"><a href="https://console.aws.amazon.com/apigateway/main/apis" target="_blank">https://console.aws.amazon.com/apigateway/main/apis</a><br>(Make sure you select the correct region first!)</span></small></p>
+        </div>
+
+      </div>
+
+    </div>
+
+    <footer class="my-5 text-center text-small">
+      <p class="mb-1">Brought to you by the incredible<br><a href="https://cloudmaniacs.de" target="_blank"><i class="fas fa-cloud"></i> Cloud Maniacs Frankfurt</a></p>
+    </footer>
+
+  </div>
+
+  <script src="../js/jquery-3.5.0.min.js"></script>
+  <script src="../js/bootstrap.bundle.min.js"></script>
+  <script src="../js/font-awesome5.all.min.js"></script>
+  <script src="../js/form-validation.js"></script>
+
+  </body>
+
+</html>

@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="Maximilian Breig, Claranet GmbH">
+    <title>IoT Center</title>
+    <link rel="icon" href="favicon.ico">
+    <link rel="shortcut icon" href="favicon.ico">
+
+    <!-- Bootstrap core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="css/form-validation.css" rel="stylesheet">
+
+    <script>
+
+      var hostname = localStorage.getItem('hostname');
+      var list = localStorage.getItem('list');
+
+      if (!hostname) { window.location.href = "setup/"; }
+      if (!list) { list = 'full'; }
+
+      var thingStore = localStorage.getItem('things');
+      var things = JSON.parse(thingStore);
+
+      document.addEventListener("DOMContentLoaded", function(event) {
+
+        document.getElementById("hostname").innerHTML = '<a href="https://' + hostname + '" target="_blank">' + hostname + '</a>';
+
+        if (thingStore) {
+
+          getThings();
+          renderThings();
+          setInterval(getThings, 60000);
+
+        } else {
+
+          things = {};
+
+        }
+
+      });
+
+
+      function getThings() {
+
+        Object.keys(things).forEach(function(id) {
+
+          getThing(id);
+
+        });
+
+      }
+
+
+      function getThing(id) {
+
+        thingname = things[id]["name"]
+
+        var request = new XMLHttpRequest();
+
+        request.open("GET", "https://" + hostname + "/?thing=" + thingname);
+
+        request.addEventListener("load", function(event) {
+
+          if (request.status >= 200 && request.status < 300) {
+
+            state = JSON.parse(request.responseText);
+
+            things[id]["state"] = state;
+
+            localStorage.setItem('things', JSON.stringify(things));
+
+            renderThings();
+
+          } else {
+
+            document.getElementById("status").innerHTML = '<span class="text-danger">Error! Thingname invalid? <i class="fas fa-times-circle"></i></span>';
+            console.warn(request.statusText, request.responseText);
+
+          }
+
+        });
+
+        request.send();
+
+      }
+
+
+      function addThing() {
+
+        var thingname = document.getElementById("thingname").value;
+
+        if (thingname == '') {
+
+          document.getElementById("status").innerHTML = '<span class="text-danger">Please enter a name! <i class="fas fa-times-circle"></i></span>';
+
+        } else {
+
+          var id = Math.round(Math.random() * 1000000000000000);
+          things[id] = {name: thingname, state: {}};
+
+          getThing(id);
+
+        }
+
+      }
+
+
+      function deleteThing(id) {
+
+        if (confirm('Do you want to DELETE this thing?')) {
+
+          delete things[id];
+          renderThings();
+
+          localStorage.setItem('things', JSON.stringify(things));
+
+        }
+
+      }
+
+
+      function renderThings() {
+
+        var itemlist = '';
+
+        Object.keys(things).forEach(function(k) {
+
+          thingname =  things[k].name;
+          thingname = thingname.substring(0, 30);
+          
+          load = 'Load Average: ' + things[k].state.load;
+          load = load.substring(0, 30);
+
+          memory = 'Memory: ' + things[k].state.memory.available + 'MB of ' + things[k].state.memory.total + 'MB available';
+          //memory = 'Memory: ' + things[k].state.memory.free + 'MB of ' + things[k].state.memory.total + 'MB free';
+          memory = memory.substring(0, 40);
+
+          uptime = 'Uptime: ' + things[k].state.uptime;
+          uptime = uptime.substring(0, 40);
+
+          r = things[k].state.lights.r;
+          g = things[k].state.lights.g;
+          b = things[k].state.lights.b;
+
+          brightness = things[k].state.lights.brightness;
+
+          temperature = things[k].state.temperature + '°C&nbsp;&nbsp;&nbsp;';
+          //temperature = things[k].state.sensors.sensor1 + '°C&nbsp;&nbsp;&nbsp;';
+
+          if (list == 'full') {
+
+            icon = 'th-list';
+            item = '<li class="list-group-item d-flex justify-content-between lh-condensed" id="' + k + '"><div><a href="javascript:selectThing(' + k + ');"><h6 class="my-0"><i class="fas fa-circle" style="color: rgb(' + r + ', ' + g + ', ' + b + '); stroke: #000000; stroke-width: 2em;"></i> ' + thingname + '</h6>' + load + '<br>' + memory + '<br><small>' + uptime + '</small></a></div><span class="text-right">' + temperature + '<a href="javascript:deleteThing(' + k + ');"><i class="fas fa-trash-alt"></i></a> | <a href="javascript:getThing(' + k + ');"><i class="fas fa-redo-alt"></i></span></li>';
+          
+          } else {
+          
+            icon = 'list';
+            item = '<li class="list-group-item d-flex justify-content-between lh-condensed" id="' + k + '"><div><a href="javascript:selectThing(' + k + ');"><h6 class="my-0"><i class="fas fa-circle" style="color: rgb(' + r + ', ' + g + ', ' + b + '); stroke: #000000; stroke-width: 2em;"></i> ' + thingname + '</h6></a></div><span class="text-right">' + temperature + '<a href="javascript:deleteThing(' + k + ');"><i class="fas fa-trash-alt"></i></a> | <a href="javascript:getThing(' + k + ');"><i class="fas fa-redo-alt"></i></span></li>';
+          
+          }
+
+          document.getElementById("badge").innerHTML = '<i class="fas fa-' + icon + '"></i>&nbsp;&nbsp;&nbsp;' + Object.keys(things).length;
+
+          itemlist += item;
+
+        });
+
+        if (!itemlist) { itemlist = '<li class="list-group-item d-flex justify-content-between bg-light"><div class="text-muted"><h6 class="my-0">No things to display yet.</h6><small>Create your first thing now below!</small></div></li>'; }
+
+        var container = document.getElementById("container");
+        container.innerHTML = itemlist;
+
+      }
+
+      var selectedThing = '';
+
+      function selectThing(id) {
+
+        if (selectedThing) {
+
+          if (document.getElementById(selectedThing)) {
+          
+            document.getElementById(selectedThing).classList.remove("selectedThing");
+          
+          }
+        }
+
+        document.getElementById(id).classList.add("selectedThing");
+        selectedThing = id;
+
+        document.getElementById("title").innerHTML = things[id].name;
+
+        document.getElementById("r").value = things[id].state.lights.r;
+        document.getElementById("g").value = things[id].state.lights.g;
+        document.getElementById("b").value = things[id].state.lights.b;
+        document.getElementById("brightness").value = things[id].state.lights.brightness * 100;
+
+        document.getElementById("relais1").value = things[id].state.relais.relais1;
+        document.getElementById("relais2").value = things[id].state.relais.relais2;
+
+        document.getElementById("sensor1").value = things[id].state.sensors.sensor1;
+        document.getElementById("sensor2").value = things[id].state.sensors.sensor2;
+
+      }
+
+
+      function updateShadow() {
+
+        id = selectedThing;
+
+        if (id == '') {
+
+          document.getElementById("status").innerHTML = '<span class="text-danger">Nothing selected! <i class="fas fa-times-circle"></i></span>';
+
+        } else {
+
+          var $form = $('#form');
+
+          if(!$form[0].checkValidity()) {
+
+            $('<input type="submit">').hide().appendTo($form).click().remove();
+
+          } else {
+
+            var request = new XMLHttpRequest();
+
+            request.open("POST", "https://" + hostname + "/");
+            request.setRequestHeader("Content-type", "application/json");
+
+            request.addEventListener("load", function(event) {
+
+              if (request.status >= 200 && request.status < 300) { setTimeout(getThing, 2000, id); }
+
+            });
+
+            data = {
+              "thingname": things[id].name,
+              "r": document.getElementById("r").value,
+              "g": document.getElementById("g").value,
+              "b": document.getElementById("b").value,
+              "brightness": document.getElementById("brightness").value / 100,
+              "relais1": document.getElementById("relais1").value,
+              "relais2": document.getElementById("relais2").value
+            };
+
+            request.addEventListener("load", function(event) {
+
+              if (request.status >= 200 && request.status < 300) {
+
+                document.getElementById("status").innerHTML = '<span class="text-success">Shadow updated! <i class="fas fa-check-circle"></i></span>';
+                setTimeout(function(){ document.getElementById("status").innerHTML = '<i class="fas fa-circle"></i>'; }, 5000);
+
+              } else {
+
+                document.getElementById("status").innerHTML = '<span class="text-danger">Update failed! <i class="fas fa-times-circle"></i></span>';
+                console.warn(request.statusText, request.responseText);
+
+              }
+
+            });
+
+            request.send(JSON.stringify(data));
+
+          }
+
+        }
+
+      }
+
+
+      function setMin(id) { document.getElementById(id).value = document.getElementById(id).min; }
+      function setMax(id) { document.getElementById(id).value = document.getElementById(id).max; }
+      
+      function toggleValue(id) {
+        
+        if (document.getElementById(id).value == document.getElementById(id).min) {
+
+          document.getElementById(id).value = document.getElementById(id).max;
+
+        } else {
+
+          document.getElementById(id).value = document.getElementById(id).min;
+
+        }
+        
+      }
+
+
+      function toggleRelais(id) {
+        
+        if (document.getElementById(id).value == 'off') {
+
+          document.getElementById(id).value = 'on';
+
+        } else {
+
+          document.getElementById(id).value = 'off';
+
+        }
+        
+      }
+
+
+      function toggleList() {
+        
+        if (list == 'full') { list = 'clean'; } else { list = 'full'; }
+        
+        renderThings();
+
+        localStorage.setItem('list', list);
+        
+      }
+
+
+      function getKey(e) {
+
+        if (e.code == 'Enter') { event.preventDefault(); addThing(); }
+
+      } document.addEventListener('keydown', getKey);
+
+
+      function logout() {
+
+        localStorage.setItem('hostname', '');
+
+        if (confirm('Do you want to DELETE all your saved things, too?')) {
+          localStorage.setItem('things', '{}');
+        }
+        window.location.href = "setup/";
+      }
+
+    </script>
+
+    <style type="text/css">
+
+      .list-group-item {
+        padding: .75rem .75rem;
+      }
+
+      *:hover, *:focus, *:active, .navbar-toggler:focus {
+        outline: none;
+        box-shadow: none !important;
+        -webkit-appearance: none;
+      }
+
+      a {
+        color: #212529 !important;
+      }
+
+      .btn-white {
+        background-color: #FFFFFF !important;
+        border-top-color: #ced4da !important;
+        border-bottom-color: #ced4da !important;
+        color: #6c757d !important;
+      }
+
+      .btn-border-left {
+        border-left-color: #FFFFFF !important;
+      }
+
+      .selectedThing {
+        background-color: #e9ecef;
+      }
+
+    </style>
+
+  </head>
+  <body class="bg-light">
+
+<div class="container">
+  <div class="py-5 text-center">
+    <i class="fas fa-5x fa-laptop-house mb-4"></i>&nbsp;&nbsp;<i class="fas fa-3x fa-thermometer-half mb-4"></i>
+    <h2>IoT Center for AWS</h2>
+    <p class="lead"><b>a simple webinterface for all your things</b></p>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6 order-md-2 mb-4">
+      <h4 class="d-flex justify-content-between align-items-center mb-3">
+        Things
+        <a href="javascript:toggleList()"><span class="badge badge-dark badge-pill" id="badge">0</span></a>
+      </h4>
+      <ul class="list-group mb-3" id="container">
+        <li class="list-group-item d-flex justify-content-between bg-light">
+          <div class="text-muted">
+            <h6 class="my-0">No things to display yet.</h6>
+            <small>Create your first thing now below!</small>
+          </div>
+        </li>
+      </ul>
+
+      <form class="card p-2">
+        <div class="input-group">
+          <input type="text" class="form-control" id="thingname" placeholder="Thingname in AWS IoT">
+          <div class="input-group-append">
+            <button type="button" class="btn btn-dark" onclick="addThing()">Add thing</button>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="col-md-6 order-md-1">
+      <h4 class="d-flex justify-content-between align-items-center mb-3"><span id="title">Select a thing <i class="fas fa-angle-double-right"></i></span>
+        <span class="lead" id="status">Ready <i class="fas fa-circle"></i></span>
+      </h4>
+      <form id="form" class="needs-validation" novalidate>
+      <hr class="mb-4">
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label>Brightness <span class="text-muted">(RGB LED)</span></label>
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <button type="button" class="btn btn-secondary" onclick="toggleValue('brightness')"><i class="fas fa-lightbulb"></i></button>
+              <button type="button" class="btn btn-white" onclick="setMin('brightness')">0</button>
+              <button type="button" class="btn btn-white" onclick="setMax('brightness')">100</button>
+            </div>
+            <input type="number" class="form-control" id="brightness" value="0" min="0" max="100" required>
+            <div class="invalid-feedback">Please enter a value between 0 and 100.</div>
+          </div>
+          <br>
+          <label>Relais 1 <span class="text-muted">(optional)</span></label>
+          <div class="input-group">
+            <div class="input-group-prepend w-100">
+              <button type="button" class="btn btn-secondary" onclick="toggleRelais('relais1')"><i class="fas fa-toggle-on"></i></button>
+              <select class="custom-select d-block w-100" id="relais1" required>
+                <option value="off">off</option>
+                <option value="on">on</option>
+              </select>
+            </div>
+            <div class="invalid-feedback">Please select an option.</div>
+          </div>
+          <br>
+          <label>Relais 2 <span class="text-muted">(optional)</span></label>
+          <div class="input-group">
+            <div class="input-group-prepend w-100">
+              <button type="button" class="btn btn-secondary" onclick="toggleRelais('relais2')"><i class="fas fa-toggle-on"></i></button>
+              <select class="custom-select d-block w-100" id="relais2" required>
+                <option value="off">off</option>
+                <option value="on">on</option>
+              </select>
+            </div>
+            <div class="invalid-feedback">Please select an option.</div>
+          </div>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label>Red <span class="text-muted">(RGB LED)</span></label>
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <button type="button" class="btn btn-secondary" onclick="toggleValue('r')" style="background-color: #CC0000;">R</button>
+              <button type="button" class="btn btn-white" onclick="setMin('r')">0</button>
+              <button type="button" class="btn btn-white" onclick="setMax('r')">255</button>
+            </div>
+            <input type="number" class="form-control" id="r" value="0" min="0" max="255" required>
+            <div class="invalid-feedback">Please enter a value between 0 and 255.</div>
+          </div>
+          <br>
+          <label>Green <span class="text-muted">(RGB LED)</span></label>
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <button type="button" class="btn btn-secondary" onclick="toggleValue('g')" style="background-color: #00AA00;">G</button>
+              <button type="button" class="btn btn-white" onclick="setMin('g')">0</button>
+              <button type="button" class="btn btn-white" onclick="setMax('g')">255</button>
+            </div>
+            <input type="number" class="form-control" id="g" value="0" min="0" max="255" required>
+            <div class="invalid-feedback">Please enter a value between 0 and 255.</div>
+          </div>
+          <br>
+          <label>Blue <span class="text-muted">(RGB LED)</span></label>
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <button type="button" class="btn btn-secondary" onclick="toggleValue('b')" style="background-color: #0000AA;">B</button>
+              <button type="button" class="btn btn-white" onclick="setMin('b')">0</button>
+              <button type="button" class="btn btn-white" onclick="setMax('b')">255</button>
+            </div>
+          <input type="number" class="form-control" id="b" value="0" min="0" max="255" required>
+          <div class="invalid-feedback">Please enter a value between 0 and 255.</div>
+        </div>
+        </div>
+      </div>
+
+      <hr class="mb-4">
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label>Sensor 1 <span class="text-muted">(optional)</span></label>
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <button type="button" class="btn btn-secondary"><i class="fas fa-thermometer-half"></i></button>
+                <input type="text" class="form-control" id="sensor1" placeholder="" disabled>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label>Sensor 2 <span class="text-muted">(optional)</span></label>
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <button type="button" class="btn btn-secondary"><i class="fas fa-thermometer-half"></i></button>
+                <input type="text" class="form-control" id="sensor2" placeholder="" disabled>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="mb-4">
+
+        <div class="btn-group btn-block" role="group" aria-label="Basic example">
+          <button type="button" class="btn btn-dark btn-lg btn-border-left" onclick="updateShadow()">Update shadow</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <footer class="my-5 text-center text-small">
+    <ul class="list-inline">
+      <li class="list-inline-item">Connected to <span id="hostname"></span></li>
+      <li><i class="fas fa-sign-out-alt"></i> <a href="javascript:logout();">Disconnect</a></li>
+    </ul>
+    <p class="mb-1">Brought to you by the incredible<br><a href="https://cloudmaniacs.de" target="_blank"><i class="fas fa-cloud"></i></a> <a href="https://cloudmaniacs.de" target="_blank">Cloud Maniacs Frankfurt</a></p>
+  </footer>
+</div>
+
+  <script src="js/jquery-3.5.0.min.js"></script>
+  <script src="js/bootstrap.bundle.min.js"></script>
+  <script src="js/font-awesome5.all.min.js"></script>
+  <script src="js/form-validation.js"></script>
+
+  </body>
+</html>

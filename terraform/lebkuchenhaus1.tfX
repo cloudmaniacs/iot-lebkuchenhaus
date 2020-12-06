@@ -1,0 +1,28 @@
+resource "aws_iot_certificate" "lebkuchenhaus1" {
+  active = true
+}
+
+resource "local_file" "lebkuchenhaus1-certificate" {
+  content  = aws_iot_certificate.lebkuchenhaus1.certificate_pem
+  filename = "../connect_device_package/lebkuchenhaus1.cert.pem"
+}
+
+resource "local_file" "lebkuchenhaus1-publickey" {
+  content  = aws_iot_certificate.lebkuchenhaus1.public_key
+  filename = "../connect_device_package/lebkuchenhaus1.public.key"
+}
+
+resource "local_file" "lebkuchenhaus1-privatekey" {
+  content  = aws_iot_certificate.lebkuchenhaus1.private_key
+  filename = "../connect_device_package/lebkuchenhaus1.private.key"
+}
+
+resource "aws_iot_policy_attachment" "lebkuchenhaus1" {
+  policy = aws_iot_policy.lebkuchenhaus.name
+  target = aws_iot_certificate.lebkuchenhaus1.arn
+}
+
+resource "aws_iot_thing_principal_attachment" "lebkuchenhaus1" {
+  principal = aws_iot_certificate.lebkuchenhaus1.arn
+  thing     = aws_iot_thing.lebkuchenhaus1.name
+}
