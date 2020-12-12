@@ -51,10 +51,20 @@ def getState():
 
     state['sensors']['sensor1'] = 0
     state['sensors']['sensor2'] = 0
+    #state['sensors']['sensor1'] = getTemperature('...')
+    #state['sensors']['sensor2'] = getTemperature('...')
 
     message = {"state": {"reported": state}}
 
     return json.dumps(message)
+
+
+def getTemperature(sensorID):
+    sensorFile = open("/sys/bus/w1/devices/"+ sensorID +"/temperature", "r")
+    sensorValue = float(sensorFile.read())
+    temperature = round(sensorValue/1000, 1)
+    sensorFile.close()
+    return temperature
 
 
 def setColor():
