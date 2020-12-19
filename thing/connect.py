@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+#import RPi.GPIO as GPIO
 import logging, time, json, sys, subprocess, os
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
 #from blinkt import set_clear_on_exit, set_brightness, set_pixel, show
@@ -11,7 +12,13 @@ rootCAPath = "root-CA.crt"
 certificatePath = thingname + ".cert.pem"
 privateKeyPath = thingname + ".private.key"
 
-# set relais to off HERE to be consistent!
+# init relais and set them to off to be consistent!
+#GPIO.setwarnings(False)
+#GPIO.setmode(GPIO.BCM)
+#GPIO.setup(22, GPIO.OUT)
+#GPIO.output(22, GPIO.LOW)
+#GPIO.setup(23, GPIO.OUT)
+#GPIO.output(23, GPIO.LOW)
 
 state = {"lights": {"r": 10, "g": 10, "b": 10, "brightness": 0.05}, "memory": {}, "relais": {"relais1": "off", "relais2": "off"}, "sensors": {}}
 
@@ -135,11 +142,29 @@ def processMessage(client, userdata, message):
         if "relais1" in response["relais"]:
 
             print("setting relais1 to " + response["relais"]["relais1"])
+
+            #if state["relais"]["relais1"] == 'on':
+    
+                #GPIO.output(22, GPIO.LOW)
+    
+            #elif state["relais"]["relais1"] == 'off':
+    
+                #GPIO.output(22, GPIO.HIGH)
+
             state["relais"]["relais1"] = response["relais"]["relais1"]
 
         if "relais2" in response["relais"]:
 
             print("setting relais2 to " + response["relais"]["relais2"])
+
+            #if state["relais"]["relais2"] == 'on':
+
+                #GPIO.output(23, GPIO.LOW)
+
+            #elif state["relais"]["relais2"] == 'off':
+
+                #GPIO.output(23, GPIO.HIGH)
+
             state["relais"]["relais2"] = response["relais"]["relais2"]
 
 
